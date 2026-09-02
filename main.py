@@ -3,24 +3,41 @@ import datetime
 
 mensagens = []
 transacoes = []
+proximo_id = 1
 
 nome = input("Nome: ")
+while True:
+    try:
+        mes_atual = int(input("Digite o mês: "))
+        ano_atual = int(input("Digite o ano: "))
+        if 1 <= mes_atual <= 12:
+            break
+        print("Digite um mês válido!")
+        continue
+    except ValueError:
+        print("Digite apenas números!")
 
 def atribuirReceita(valor, local):
+    global proximo_id
     transacoes.append({
+        "id": proximo_id,
         "tipo": "receita",
         "valor": valor,
         "local": local,
-        "data": datetime.datetime.now()
+        "data": datetime.datetime(ano_atual, mes_atual, 1)
     })
+    proximo_id = proximo_id+1
 
 def atribuirDespesa(valor, local):
+    global proximo_id
     transacoes.append({
+        "id": proximo_id,
         "tipo": "despesa",
         "valor": valor,
         "local": local,
-        "data": datetime.datetime.now()
+        "data": datetime.datetime(ano_atual, mes_atual, 1)
     })
+    proximo_id = proximo_id+1
 
 def calcularSaldo(mes, ano):
     totalReceita = 0
@@ -43,10 +60,10 @@ def gerarDetalhes(mes, ano):
 
     for transacao in transacoes:
         if transacao["tipo"] == "receita" and transacao["data"].month == mes and transacao["data"].year == ano:
-            detalhes_receita += f'{transacao["local"]} - R$ {transacao["valor"]:.2f}\n'
+            detalhes_receita += f'{transacao["id"]} - {transacao["local"]} - R$ {transacao["valor"]:.2f}\n'
 
         elif transacao["tipo"] == "despesa" and transacao["data"].month == mes and transacao["data"].year == ano:
-            detalhes_despesa += f'{transacao["local"]} - R$ {transacao["valor"]:.2f}\n'
+            detalhes_despesa += f'{transacao["id"]} - {transacao["local"]} - R$ {transacao["valor"]:.2f}\n'
 
     return detalhes_receita, detalhes_despesa
 
@@ -61,7 +78,6 @@ def calcularPorcentagens(mes, ano):
             else:
                 gastos_por_local[transacao["local"]] = transacao["valor"]
 
-    porcentagens = {}
     totalDespesa = 0
     for local in gastos_por_local:
         valor = gastos_por_local[local]
@@ -93,10 +109,13 @@ while True:
     msg_bot = f"""
 Olá, {nome}! Vamos controlar suas finanças?
     
-Digite:
+Período atual: {mes_atual}/{ano_atual}
+
 1 - Adicionar receita
 2 - Adicionar despesa
 3 - Relatório
+4 - Alterar período
+5 - Excluir transação
 """
     mensagens.append({
         "nome": bot,
@@ -142,16 +161,9 @@ Digite:
                 "texto": msg_bot
             })
         case "3":
-            while True:
-                try:
-                    mes = int(input("Digite o mês: "))
-                    ano = int(input("Digite o ano: "))
-                    if 1 <= mes <= 12:
-                        break
-                    print("Digite um mês válido!")
-                    continue
-                except ValueError:
-                    print("Digite apenas números!")
+            mes = mes_atual
+            ano = ano_atual
+
             saldo, totalDespesa, totalReceita = calcularSaldo(mes, ano)
             detalhes_receita, detalhes_despesa = gerarDetalhes(mes, ano)
             detalhes_porcentagem = calcularPorcentagens(mes, ano)
@@ -177,6 +189,45 @@ Porcentagem de gastos:
                 "nome": bot,
                 "texto": msg_bot
             })
+        case "4":
+            while True:
+                try:
+                    mes_atual = int(input("Digite o mês: "))
+                    ano_atual = int(input("Digite o ano: "))
+                    if 1 <= mes_atual <= 12:
+                        break
+                    print("Digite um mês válido!")
+                    continue
+                except ValueError:
+                    print("Digite apenas números!")
+        case "5":
+            try:
+                id_excluir = int(input("Digite o número da transação que deseja excluir: "))
+
+                for transacao in transacoes:
+                    if transacao["id"] == id_excluir and transacao["data"].month == mes_atual and transacao["data"].year == ano_atual:
+                        transacoes.remove(transacao)
+
+                        msg_bot = f"Transação {id_excluir} excluída com sucesso!"
+                        mensagens.append({
+                            "nome": bot,
+                            "texto": msg_bot
+                        })
+                        break
+                else:
+                    msg_bot = "Transação não encontrada nesse período!"
+                    mensagens.append({
+                        "nome": bot,
+                        "texto": msg_bot
+                    })
+
+            except ValueError:
+                msg_bot = "Digite apenas números!"
+                mensagens.append({
+                    "nome": bot,
+                    "texto": msg_bot
+                })
+
         case _:
             msg_bot = "não entendi o que você digitou"
             mensagens.append({
